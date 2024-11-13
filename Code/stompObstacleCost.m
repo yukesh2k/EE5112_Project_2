@@ -12,7 +12,7 @@ env_corner_vec = repmat(env_corner,length(sphere_centers),1); % copy it to be co
 idx = ceil((sphere_centers-env_corner_vec)./voxel_world.voxel_size);
 
 %% TODO: complete the following code according to Eq (13) in the STOMP conference paper.
-try
+% try
     cost_array = zeros(length(sphere_centers), 1);  % Initialize cost array
     
     % Loop through each sphere center
@@ -22,12 +22,13 @@ try
         
         % Calculate the cost based on the formula
         rb = radius(i);  % Radius of the obstacle
-        cost_b = max(epsilon + rb - d_xb, 0) * norm(vel(i,:));  % Cost function for this obstacle
+        cost = max(safety_margin + rb - d_xb, 0) * norm(vel(i,:));  % Cost function for this obstacle
         
         % Accumulate the cost
-        cost_array(i) = cost_b;
+        cost_array(i) = cost;
     end
     cost = sum(cost_array);
-catch  % for debugging
-    idx = ceil((sphere_centers-env_corner_vec)./voxel_world.voxel_size);
+% catch  % for debugging
+%     disp('in debug');
+%     idx = ceil((sphere_centers-env_corner_vec)./voxel_world.voxel_size);
 end

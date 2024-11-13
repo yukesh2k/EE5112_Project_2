@@ -37,3 +37,50 @@ for k=1:nJoints
 end
     
 end
+
+function T = getTransform_POE(robot_struct, tConfiguration, bodyName)
+    % Find the index of the joint based on the body name
+    bodyIndex = find(strcmp(robot_struct.BodyNames, bodyName));
+    
+    if isempty(bodyIndex)
+        error('Body with name %s not found in the robot structure.', bodyName);
+    end
+    
+    % Define the home configuration transformation matrix of the base
+    T_base = eye(4);  % Assuming identity for the base frame
+    
+    % Define screw axes for each joint in the robot
+    % Format: [wx, wy, wz, vx, vy, vz] for each joint
+    screw_axes = robot_struct.ScrewAxes;
+    
+    % Initialize the transformation matrix to identity
+    T = T_base;
+
+    % Loop through each joint up to the specified joint (bodyIndex) to apply POE
+    for i = 1:bodyIndex
+        % Get the screw axis for the i-th joint
+        S = screw_axes(:, i);  % Assume screw_axes is a 6xN matrix
+
+        % Decompose screw axis into angular and linear components
+        w = S(1:3);  % Rotation axis part of the screw axis
+        v = S(4:6);  % Translation part of the screw axis
+
+        % Get the joint angle from the configuration
+        theta_i = tConfiguration(i).JointPosition;
+
+        % Compute the transformation for the i-th joint using POE
+        T = T * expm(twistMatrix(w, v) * theta_i);
+    end
+end
+
+% Helper function to create the twist matrix
+function twist_mat = twistMatrix(w, v)
+    % Create the twist matrix for a given screw axis
+    twist_mat = [skew(w), v; 0, 0, 0, 0];
+end
+
+% Helper function to create the skew-symmetric matrix of a vector
+function S = skew(w)
+    % Create a skew-symmetric matrix from a vector
+    S = [0, -w(3), w(2); w(3), 0, -w(1); -w(2), w(1), 0];
+end

@@ -3,6 +3,11 @@ nDiscretize = 20; % number of discretized waypoint
 nPaths = 20; % number of sample paths
 convergenceThreshold = 0.1; % convergence threshhold
 
+% Noise level constant
+noise_level = 0.1;
+
+theta_animation = {};
+
 % Initial guess of joint angles theta is just linear interpolation of q0
 % and qT
 q0 = currentRobotJConfig;
@@ -52,21 +57,17 @@ while abs(Qtheta - QthetaOld) > convergenceThreshold
     for p = 1:nPaths
         theta_samples{p} = theta + randn(size(theta)) * noise_level; % Add Gaussian noise to generate new samples
     end
-
-
+    
     %% TODO: Calculate Local trajectory cost for each sampled trajectory
     % variable declaration (holder for the cost):
     Stheta = zeros(nPaths, nDiscretize); % Each row corresponds to a sampled trajectory
-    Qtheta_samples = zeros(1, nPaths);   % Store the overall cost for each sampled trajectory
     
     for p = 1:nPaths
         % Calculate the cost for the p-th sampled trajectory
-        [Stheta(p, :), Qtheta_samples(p)] = stompTrajCost(robot_struct, theta_samples{p}, R, voxel_world);
+        [Stheta(p, :), Qtheta(p)] = stompTrajCost(robot_struct, theta_samples{p}, R, voxel_world);
     end
-    
     %% TODO: Given the local traj cost, update local trajectory probability
     trajProb = stompUpdateProb(Stheta);
-
     
     %% TODO: Compute delta theta (aka gradient estimator, the improvement of the delta)
     delta_theta = zeros(size(theta));
@@ -99,24 +100,22 @@ while abs(Qtheta - QthetaOld) > convergenceThreshold
     Qtheta % display overall cost
     RAR  % display control cost
 
+    theta_animation{iter} = theta;
+
     % Set the stopping iteration criteria:
     if iter > 50 
         disp('Maximum iteration (50) has reached.')
         break
     end
 
-    if sum(dtheta_smoothed,'all') == 0
-    disp('Estimated gradient is 0 and Theta is not updated: there could be no obstacle at all')
-    break
+    if sum(delta_theta,'all') == 0
+        disp('Estimated gradient is 0 and Theta is not updated: there could be no obstacle at all')
+        break
     end
 
 end
 
 disp('STOMP Finished.');
-
-
-
-
 
 
 %% check collision
@@ -137,7 +136,7 @@ isTrajectoryInCollision = any(inCollision)
 
 
 %% Plot training iteration process
-enableVideoTraining = 0;
+enableVideoTraining = 1;
 
 
 
